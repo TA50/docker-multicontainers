@@ -1,0 +1,15 @@
+services:
+  backend:
+    container_name: backend
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile.server
+
+  proxy:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile.nginx
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

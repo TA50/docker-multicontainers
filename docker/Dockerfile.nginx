@@ -1,0 +1,48 @@
+
+FROM node:alpine as admin-build
+WORKDIR /admin
+
+COPY ./admin/package.json ./package.json
+# install production dependencies with npm run
+RUN yarn
+
+COPY ./admin .
+# build production frontend
+RUN yarn build
+
+# website
+FROM node:alpine as website-build
+WORKDIR /website
+
+COPY ./website/package.json  ./package.json
+# install production dependencies with npm run
+RUN yarn 
+
+COPY ./website .
+# build production fr
+RUN yarn build
+
+
+FROM nginx:latest AS nginx
+
+RUN apt-get update && apt-get install -y curl gnupg && \
+    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
+    echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
+    apt-get update && apt-get install -y yarn
+
+COPY ./docker/nginx.conf /etc/nginx/nginx.conf
+
+# Copy the static files from the build stage
+COPY --from=admin-build /admin/dist  /var/www/admin.localhost
+COPY --from=website-build /website/dist  /var/www/localhost
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+
+#  run server 
+# RUN node /var/www/api.localhost/dist/index.js
+# Expose port 80 for HTTP traffic
+EXPOSE 80
+
+CMD [ "nginx", "-g", "daemon off;" ]
